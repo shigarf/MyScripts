@@ -12,38 +12,37 @@ $Host.UI.RawUI.WindowTitle = "ESPTool Automator"
 
 # Global Config
 $script:baud = 460800
-$width = { $Host.UI.RawUI.WindowSize.Width - 1 }
-$sep   = { '-' * (&$width) }
+$width      = { $Host.UI.RawUI.WindowSize.Width - 1 }
+$sep        = { '-' * (&$width) }
 
-# Menu options map
+# Menu options map (now including [R])
 $menuMap = @{
-    1  = "Read Chip ID"
-    2  = "Read Flash ID"
-    3  = "Erase Flash"
-    4  = "Flash Firmware"
-    5  = "Dump Flash"
-    6  = "Read MAC"
-    7  = "Write MAC"
-    8  = "Read eFuses"
-    9  = "Burn eFuse"
-    10 = "Read Memory"
-    11 = "Write Memory"
-    12 = "Load+Exec Stub"
-    13 = "Reset Chip"
-    14 = "esptool Version"
-    0  = "Exit"
+    1   = "Read Chip ID"
+    2   = "Read Flash ID"
+    3   = "Erase Flash"
+    4   = "Flash Firmware"
+    5   = "Dump Flash"
+    6   = "Read MAC"
+    7   = "Write MAC"
+    8   = "Read eFuses"
+    9   = "Burn eFuse"
+    10  = "Read Memory"
+    11  = "Write Memory"
+    12  = "Load+Exec Stub"
+    13  = "Reset Chip"
+    14  = "esptool Version"
+    0   = "Exit"
+    'R' = "Select Serial Port"
 }
 
-# Function: Detect esptool.exe path
 function Get-EsptoolPath {
-    #===================================================================
     Clear-Host
     Write-Host (&$sep) -ForegroundColor DarkCyan
     $title = "ESPTool v5 Automator"
     $pad   = [Math]::Max(0, [Math]::Floor(((&$width) - $title.Length)/2))
     Write-Host (" " * $pad) $title
     Write-Host (&$sep) -ForegroundColor DarkCyan
-    #===================================================================
+
     Write-Host "Checking for esptool.exe ..." -ForegroundColor Yellow
     $cmd = Get-Command esptool.exe -ErrorAction SilentlyContinue
     if ($cmd) {
@@ -58,12 +57,10 @@ function Get-EsptoolPath {
         Write-Host "[ERROR] esptool.exe not found. Please install and retry." -ForegroundColor Red
         exit 1
     }
-    Write-Host (&$sep) -ForegroundColor DarkCyan
 }
 
-# Function: Detect espefuse.exe path
 function Get-EspefusePath {
-    Write-Host "Checking for espefuse ..." -ForegroundColor Yellow
+    Write-Host "Checking for espefuse.exe ..." -ForegroundColor Yellow
     $cmd = Get-Command espefuse.exe -ErrorAction SilentlyContinue
     if ($cmd) {
         Write-Host "Found espefuse.exe in PATH." -ForegroundColor Green
@@ -79,32 +76,31 @@ function Get-EspefusePath {
     }
 }
 
-# Function: Get serial port with selection
 function Get-SerialPort {
     $ports = [System.IO.Ports.SerialPort]::GetPortNames()
-    if ($null -eq $ports -or $ports.Length -eq 0) {
+    if (-not $ports -or $ports.Count -eq 0) {
         Write-Error "No COM ports found. Connect your ESP device and try again."
-        exit
+        return $null
     }
-    elseif ($ports.Count -eq 1) {
+    if ($ports.Count -eq 1) {
         Write-Host "Auto-selected port: $($ports[0])" -ForegroundColor Green
         return $ports[0]
     }
-    else {
-        Write-Host "Available COM ports:" -ForegroundColor Cyan
-        for ($i = 0; $i -lt $ports.Count; $i++) {
-            Write-Host " [$i] $($ports[$i])"
-        }
-        $idx = Read-Host "Select index (0-$($ports.Count - 1))"
-        if ($idx -match '^\d+$' -and $idx -lt $ports.Count) {
-            return $ports[$idx]
-        }
-        Write-Host "Invalid selection. Exiting." -ForegroundColor Red
-        exit
+
+    Write-Host "Available COM ports:" -ForegroundColor Cyan
+    for ($i = 0; $i -lt $ports.Count; $i++) {
+        Write-Host " [$i] $($ports[$i])"
     }
+
+    do {
+        $idx = Read-Host "Select index (0-$($ports.Count - 1))"
+    } until ($idx -match '^\d+$' -and [int]$idx -lt $ports.Count)
+
+    $port = $ports[[int]$idx]
+    Write-Host "Selected port: $port" -ForegroundColor Green
+    return $port
 }
 
-# Function: Select chip type
 function Select-Chip {
     Write-Host ""
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
@@ -114,22 +110,18 @@ function Select-Chip {
     Write-Host "|  [1] ESP32-WROOM-32E          |" -ForegroundColor Cyan
     Write-Host "|  [2] ESP32-S3                 |" -ForegroundColor Cyan
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
+
     do {
-        $choice = Read-Host "Enter choice: "
+        $choice = Read-Host "Enter choice"
     } until ($choice -in '0','1','2')
 
-    if ($choice -eq '0') {
-        return "auto"
-    }
-    elseif ($choice -eq '1') {
-        return "esp32"
-    }
-    else {
-        return "esp32s3"
+    switch ($choice) {
+        '0' { return "auto" }
+        '1' { return "esp32" }
+        '2' { return "esp32s3" }
     }
 }
 
-# Function: Try to get BIN file path matching a pattern
 function TryGetBinPath {
     param (
         [System.IO.FileInfo[]]$Bins,
@@ -138,15 +130,15 @@ function TryGetBinPath {
     )
     $match = $Bins | Where-Object { $_.BaseName -match $Pattern } | Select-Object -First 1
     if ($match) {
-       Write-Host ("Found {0}: {1}" -f $Label, $match.Name) -ForegroundColor Green
+        Write-Host ("Found {0}: {1}" -f $Label, $match.Name) -ForegroundColor Green
         return $match.FullName
-    } else {
+    }
+    else {
         Write-Host "Could not detect $Label automatically." -ForegroundColor Yellow
         return $null
     }
 }
 
-# Function: Show header
 function Show-Header {
     Clear-Host
     Write-Host (&$sep) -ForegroundColor DarkCyan
@@ -159,47 +151,45 @@ function Show-Header {
     Write-Host ""
 }
 
-# Function: Show menu nicely formatted
 function Show-Menu {
     Show-Header
     $sections = @(
-        @{Title = "Main Actions";      Keys = 1..6},
-        @{Title = "Advanced Actions";  Keys = 7..12},
-        @{Title = "Utility Actions";   Keys = @(13,14,0)}
+        @{ Title = "Main Actions";    Keys = 1..6 },
+        @{ Title = "Advanced Actions";Keys = 7..12 },
+        @{ Title = "Utility Actions"; Keys = @(13,14,0,'R') }
     )
     foreach ($section in $sections) {
         Write-Host ""
         Write-Host "== $($section.Title) ==" -ForegroundColor Magenta
         $line = ""
         foreach ($key in $section.Keys) {
-            $line += "[{0}] {1,-16}" -f $key, $menuMap[$key]
+            $label = $menuMap[$key]
+            $line += "[{0}] {1,-18}" -f $key, $label
         }
         Write-Host $line
     }
     Write-Host ""
+    Write-Host "Type [R] to select serial port" -ForegroundColor Yellow
+    Write-Host ""
 }
 
-# Function: Run esptool with progress (renamed parameter to avoid collision)
 function Invoke-Esptool {
     [CmdletBinding()]
-    param(
-        [string[]]$EsptoolArgs      # was $ToolArgs or $esptoolArgs
+    param (
+        [string[]]$EsptoolArgs
     )
     $cmd = "esptool {0}" -f ($EsptoolArgs -join ' ')
     Write-Host "Running: $cmd" -ForegroundColor Cyan
-
     & $script:esptoolPath @EsptoolArgs
 }
 
-# Function: Run espefuse command
 function Invoke-Espefuse {
     [CmdletBinding()]
-    param(
-        [string[]]$EspefuseArgs     # avoid using $espfuseArgs
+    param (
+        [string[]]$EspefuseArgs
     )
     $cmd = "espefuse {0}" -f ($EspefuseArgs -join ' ')
     Write-Host "Running: $cmd" -ForegroundColor Cyan
-
     & $script:espefusePath @EspefuseArgs
 }
 
@@ -207,6 +197,7 @@ function Invoke-Espefuse {
 $script:esptoolPath = Get-EsptoolPath
 $script:espefusePath = Get-EspefusePath
 $port             = Get-SerialPort
+if (-not $port) { exit 1 }
 $chip             = Select-Chip
 
 # Main loop
@@ -214,46 +205,44 @@ while ($true) {
     Clear-Host
     Show-Menu
     Write-Host (&$sep) -ForegroundColor DarkCyan
-    $selection = Read-Host "Select option"
+    $selection = Read-Host "Select option or [R] to select serial port"
 
-    if (-not [int]::TryParse($selection, [ref]$null)) {
-        Write-Host "Invalid input. Please enter a number from 0 to 14." -ForegroundColor Red
+    if ($selection -match '^[Rr]$') {
+        $newPort = Get-SerialPort
+        if ($newPort) { $port = $newPort }
         continue
     }
-    if (-not $menuMap.ContainsKey([int]$selection)) {
+
+    if (-not [int]::TryParse($selection, [ref]$null)) {
+        Write-Host "Invalid input. Please enter a number or R." -ForegroundColor Red
+        continue
+    }
+
+    $selInt = [int]$selection
+    if (-not $menuMap.ContainsKey($selInt)) {
         Write-Host "Invalid option. Please select a valid choice." -ForegroundColor Red
         continue
     }
 
     Clear-Host
     Write-Host (&$sep) -ForegroundColor DarkCyan
-    Write-Host ("Selected: [{0}] {1}" -f $selection, $menuMap[[int]$selection]) -ForegroundColor Yellow
+    Write-Host ("Selected: [{0}] {1}" -f $selInt, $menuMap[$selInt]) -ForegroundColor Yellow
     Write-Host (&$sep) -ForegroundColor DarkCyan
 
-    switch ([int]$selection) {
-        1 {
-            $esptoolArgs = @('--chip', $chip, '--port', $port, 'chip-id')
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
-        }
-        2 {
-            $esptoolArgs = @('--chip', $chip, '--port', $port, 'flash-id')
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
-        }
-        3 {
-            $esptoolArgs = @('--chip', $chip, '--port', $port, 'erase-flash')
-            Invoke-Esptool -EsptoolArgs $esptoolArgs 
-        }
-        4 {
+    switch ($selInt) {
+        1  { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'chip-id') }
+        2  { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'flash-id') }
+        3  { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'erase-flash') }
+        4  {
             $fwFolder = Read-Host "Enter firmware folder path"
             if (Test-Path $fwFolder) {
                 $bins = Get-ChildItem $fwFolder -Filter *.bin -File
-                $boot = TryGetBinPath -Bins $bins -Pattern '^boot'     -Label 'bootloader'
-                $part = TryGetBinPath -Bins $bins -Pattern '^part'     -Label 'partition-table'
-                $app  = TryGetBinPath -Bins $bins -Pattern '^(firm|app)' -Label 'firmware/app'
-
-                if (-not $boot) { $boot = Read-Host "Enter bootloader.bin full path" }
-                if (-not $part) { $part = Read-Host "Enter partition-table.bin full path" }
-                if (-not $app)  { $app  = Read-Host "Enter firmware.bin full path" }
+                $boot = TryGetBinPath -Bins $bins -Pattern '^boot'      -Label 'bootloader'
+                $part = TryGetBinPath -Bins $bins -Pattern '^part'      -Label 'partition-table'
+                $app  = TryGetBinPath -Bins $bins -Pattern '^(firm|app)'-Label 'firmware/app'
+                if (-not $boot) { $boot = Read-Host "Bootloader.bin path" }
+                if (-not $part) { $part = Read-Host "Partition-table.bin path" }
+                if (-not $app)  { $app  = Read-Host "Firmware.bin path" }
             }
             else {
                 Write-Host "⚠ Folder not found — manual entry required." -ForegroundColor Red
@@ -261,78 +250,53 @@ while ($true) {
                 $part = Read-Host "Partition-table.bin path"
                 $app  = Read-Host "Firmware.bin path"
             }
-
-            $esptoolArgs = @(
-                '--chip',  $chip,
-                '--port',  $port,
-                '--baud',  $script:baud,
-                'write-flash', '-z',
-                '0x1000',  $boot,
-                '0x8000',  $part,
-                '0x10000', $app
+            Invoke-Esptool -EsptoolArgs @(
+                '--chip',$chip,'--port',$port,'--baud',$script:baud,
+                'write-flash','-z',
+                '0x1000',$boot,
+                '0x8000',$part,
+                '0x10000',$app
             )
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
         }
-        5 {
+        5  {
             $startOffset = Read-Host "Start offset (hex, e.g. 0x00000)"
             $length      = Read-Host "Length (decimal)"
             $outputFile  = Read-Host "Output filename"
-            $esptoolArgs = @(
-                '--chip', $chip,
-                '--port', $port,
-                'dump-flash',
-                '--start', $startOffset,
-                '--length',$length,
+            Invoke-Esptool -EsptoolArgs @(
+                '--chip',$chip,'--port',$port,
+                'dump-flash','--start',$startOffset,'--length',$length,
                 $outputFile
             )
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
         }
-        6 {
-            $esptoolArgs = @('--chip', $chip, '--port', $port, 'read-mac')
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
-        }
-        7 {
+        6  { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'read-mac') }
+        7  {
             $newMac = Read-Host "Enter new MAC (xx:xx:xx:xx:xx:xx)"
-            $esptoolArgs   = @('--chip', $chip, '--port', $port, 'write-mac', $newMac)
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
+            Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'write-mac',$newMac)
         }
-        8 {
-            $espfuseArgs = @('--chip', $chip, '--port', $port, 'summary')
-            Invoke-Espefuse $espfuseArgs
-        }
-        9 {
+        8  { Invoke-Espefuse -EspefuseArgs @('--chip',$chip,'--port',$port,'summary') }
+        9  {
             $efuseField = Read-Host "Enter eFuse to burn (e.g. DIS_USB_JTAG)"
-            $espfuseArgs       = @('--chip', $chip, '--port', $port, 'burn-efuse', $efuseField)
-            Invoke-Espefuse $espfuseArgs
+            Invoke-Espefuse -EspefuseArgs @('--chip',$chip,'--port',$port,'burn-efuse',$efuseField)
         }
         10 {
             $address = Read-Host "Memory address (hex)"
             $count   = Read-Host "Byte count (decimal)"
             $file    = Read-Host "Output filename"
-            $esptoolArgs    = @('--chip', $chip, '--port', $port, 'read-memory', $address, $count, $file)
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
+            Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'read-memory',$address,$count,$file)
         }
         11 {
             $address = Read-Host "Memory address (hex)"
             $file    = Read-Host "Input filename"
-            $esptoolArgs    = @('--chip', $chip, '--port', $port, 'write-memory', $address, $file)
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
+            Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'write-memory',$address,$file)
         }
         12 {
             $address  = Read-Host "RAM address to load stub (hex)"
             $stubFile = Read-Host "Stub filename to load"
-            $esptoolArgs     = @('--chip', $chip, '--port', $port, 'load-ram', $address, $stubFile)
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
+            Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'load-ram',$address,$stubFile)
         }
-        13 {
-            $esptoolArgs = @('--chip', $chip, '--port', $port, 'run')
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
-        }
-        14 {
-            $esptoolArgs = @('version')
-            Invoke-Esptool -EsptoolArgs $esptoolArgs
-        }
-        0 {
+        13 { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'run') }
+        14 { Invoke-Esptool -EsptoolArgs @('version') }
+        0  {
             Write-Host "Goodbye!" -ForegroundColor Green
             exit 0
         }
