@@ -12,6 +12,11 @@ $ErrorActionPreference = 'Stop'
 $Host.UI.RawUI.WindowTitle = "ESPTool Automator"
 
 #------------------------------------------------------------
+# Global Config
+#------------------------------------------------------------
+$script:baud = 460800  # Default baud rate for esptool
+
+#------------------------------------------------------------
 # UI Color Palette and Version
 #------------------------------------------------------------
 $script:UIColors = @{
@@ -22,7 +27,8 @@ $script:UIColors = @{
     Warning   = 'Yellow'
     Error     = 'Red'
 }
-$script:Version = '1.0.0'
+$script:Version = '1.1.0'
+$script:subtitle = "ESPTool v5 Automator"
 
 #------------------------------------------------------------
 # UI Functions
@@ -37,11 +43,12 @@ function Show-Separator {
 
 function Show-Logo {
     $logoLines = @(
-        '   ____  _____ ____  _   _  ',
-        '  / ___|| ____|  _ \| | | | ',
-        '  \___ \|  _| | |_) | |_| | ',
-        '   ___) | |___|  __/|  _  | ',
-        '  |____/|_____|_|   |_| |_| ',
+    '    ____    _   _   ___    ____    ____  __   __   ',
+    '   / ___|  | | | | |_ _|  / ___|  / ___| \ \ / /   ',
+    '   \___ \  | |_| |  | |  | |  _  | |  _   \ V /    ',
+    '    ___) | |  _  |  | |  | |_| | | |_| |   | |     ',
+    '   |____/  |_| |_| |___|  \____|  \____|   |_|     ',
+        "         v$($script:subtitle)        "
         "         v$($script:Version)        "
     )
     foreach ($line in $logoLines) {
@@ -68,27 +75,39 @@ function Show-Menu {
     Show-Header
 
     $sections = @(
-        @{ Title = 'Main Actions';     Keys = 1..6              },
-        @{ Title = 'Advanced Actions'; Keys = 7..12             },
-        @{ Title = 'Utility Actions';  Keys = @(13,14,0,'R')    }
+        @{ Title = 'Main Actions';     Keys = 1..6           },
+        @{ Title = 'Advanced Actions'; Keys = 7..12          },
+        @{ Title = 'Utility Actions';  Keys = @(13,14,0,'R') }
     )
 
+    $chunkSize = 4
+
     foreach ($sec in $sections) {
+        # Center the section title
         $secTitle = "  $($sec.Title)  "
-        $pad      = [Math]::Floor((($Host.UI.RawUI.WindowSize.Width - $secTitle.Length)/2))
+        $pad      = [Math]::Floor((($Host.UI.RawUI.WindowSize.Width - $secTitle.Length) / 2))
         Write-Host (' ' * $pad) $secTitle -ForegroundColor $script:UIColors.Section
 
-        $line = ''
-        foreach ($key in $sec.Keys) {
-            $label = $menuMap[$key]
-            $line += "[{0}] {1,-18}" -f $key, $label
+        # Break the keys into groups of $chunkSize
+        $keys = $sec.Keys
+        for ($i = 0; $i -lt $keys.Count; $i += $chunkSize) {
+            $end = [Math]::Min($i + $chunkSize - 1, $keys.Count - 1)
+            $group = $keys[$i..$end]
+
+            # Build and print one line of up to 4 items
+            $line = ''
+            foreach ($key in $group) {
+                $label = $menuMap[$key]
+                $line += "[{0}] {1,-18}" -f $key, $label
+            }
+            Write-Host $line -ForegroundColor $script:UIColors.MenuItem
         }
-        Write-Host $line -ForegroundColor $script:UIColors.MenuItem
-        Write-Host ''
+
+        Write-Host ''  # blank line after each section
     }
 
     Write-Host "Type [R] to select serial port" -ForegroundColor $script:UIColors.Warning
-    Write-Host ''
+    Write-Host ''  # final padding
 }
 
 #------------------------------------------------------------
