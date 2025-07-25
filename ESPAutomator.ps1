@@ -182,6 +182,7 @@ $chip             = Select-Chip
 
 # Main loop
 while ($true) {
+    Write-Host (&$sep) -ForegroundColor DarkCyan
     Show-Menu
     $selection = Read-Host "Select option"
 
