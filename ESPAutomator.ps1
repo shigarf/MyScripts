@@ -182,8 +182,9 @@ $chip             = Select-Chip
 
 # Main loop
 while ($true) {
-    Write-Host (&$sep) -ForegroundColor DarkCyan
+    Clear-Host
     Show-Menu
+    Write-Host (&$sep) -ForegroundColor DarkCyan
     $selection = Read-Host "Select option"
 
     if (-not [int]::TryParse($selection, [ref]$null)) {
@@ -195,7 +196,9 @@ while ($true) {
         continue
     }
 
+    Clear-Host
     Write-Host ("Selected: [{0}] {1}" -f $selection, $menuMap[[int]$selection]) -ForegroundColor Yellow
+    Write-Host (&$sep) -ForegroundColor DarkCyan
 
     switch ([int]$selection) {
         1 {
