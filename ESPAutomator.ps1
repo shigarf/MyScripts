@@ -28,7 +28,7 @@ $script:UIColors = @{
     Error     = 'Red'
 }
 $script:Version = '1.1.0'
-$script:subtitle = "ESPTool v5 Automator"
+$script:subtitle = "ESPTool V5 Automator"
 
 #------------------------------------------------------------
 # UI Functions
@@ -48,8 +48,8 @@ function Show-Logo {
     '   \___ \  | |_| |  | |  | |  _  | |  _   \ V /    ',
     '    ___) | |  _  |  | |  | |_| | | |_| |   | |     ',
     '   |____/  |_| |_| |___|  \____|  \____|   |_|     ',
-        "         v$($script:subtitle)        "
-        "         v$($script:Version)        "
+        "         $($script:subtitle)        "
+        "         Ver. $($script:Version)        "
     )
     foreach ($line in $logoLines) {
         $pad = [Math]::Floor((($Host.UI.RawUI.WindowSize.Width - $line.Length)/2))
@@ -257,6 +257,22 @@ function Invoke-Espefuse {
 }
 
 #------------------------------------------------------------
+function Confirm-Action {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Message
+    )
+
+    do {
+        $response = Read-Host "$Message (Y or N)"
+    } while ($response -notin 'Y','N','y','n')
+
+    return $response -in 'Y','y'
+}
+
+
+#------------------------------------------------------------
 # Initialization
 #------------------------------------------------------------
 $script:esptoolPath = Get-EsptoolPath
@@ -302,7 +318,15 @@ while ($true) {
     switch ($selInt) {
         1  { Invoke-Esptool    -EsptoolArgs @('--chip',$chip,'--port',$port,'chip-id') }
         2  { Invoke-Esptool    -EsptoolArgs @('--chip',$chip,'--port',$port,'flash-id') }
-        3  { Invoke-Esptool    -EsptoolArgs @('--chip',$chip,'--port',$port,'erase-flash') }
+        3  { 
+            if (Confirm-Action -Message 'Are you sure you want to Erase Flash?') {
+            Invoke-Esptool    -EsptoolArgs @('--chip',$chip,'--port',$port,'erase-flash')
+            esptool.exe --chip $ChipName erase_flash
+            } else {
+                Write-Host 'Erase Flash canceled.' -ForegroundColor Cyan
+            }
+        }
+        
         4  {
             $fwFolder = Read-Host "Enter folder path [bootloader.bin, partition-table.bin, firmware/app.bin]"
             if (Test-Path $fwFolder) {
