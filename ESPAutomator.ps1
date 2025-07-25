@@ -36,6 +36,12 @@ $menuMap = @{
 
 # Function: Detect esptool.exe path
 function Get-EsptoolPath {
+    Clear-Host
+    Write-Host (&$sep) -ForegroundColor DarkCyan
+    $title = "ESPTool v5 Automator"
+    $pad   = [Math]::Max(0, [Math]::Floor(((&$width) - $title.Length)/2))
+    Write-Host (" " * $pad) $title
+    Write-Host (&$sep) -ForegroundColor DarkCyan
     Write-Host "Checking for esptool.exe ..." -ForegroundColor Yellow
     $cmd = Get-Command esptool.exe -ErrorAction SilentlyContinue
     if ($cmd) {
@@ -50,6 +56,7 @@ function Get-EsptoolPath {
         Write-Host "[ERROR] esptool.exe not found. Please install and retry." -ForegroundColor Red
         exit 1
     }
+    Write-Host (&$sep) -ForegroundColor DarkCyan
 }
 
 # Function: Detect espefuse.exe path
@@ -97,23 +104,26 @@ function Get-SerialPort {
 
 # Function: Select chip type
 function Select-Chip {
-    Clear-Host
     Write-Host ""
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
     Write-Host "|  Select Chip                  |" -ForegroundColor Cyan
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
+    Write-Host "|  [0] Auto                     |" -ForegroundColor Cyan
     Write-Host "|  [1] ESP32-WROOM-32E          |" -ForegroundColor Cyan
     Write-Host "|  [2] ESP32-S3                 |" -ForegroundColor Cyan
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
     do {
-        $choice = Read-Host "Enter choice (1 or 2)"
-    } until ($choice -in '1','2')
+        $choice = Read-Host "Enter choice: "
+    } until ($choice -in '0','1','2')
 
-    if ($choice -eq '2') {
-        return "esp32s3"
+    if ($choice -eq '0') {
+        return "auto"
+    }
+    elseif ($choice -eq '1') {
+        return "esp32"
     }
     else {
-        return "esp32"
+        return "esp32s3"
     }
 }
 
@@ -197,6 +207,7 @@ while ($true) {
     }
 
     Clear-Host
+    Write-Host (&$sep) -ForegroundColor DarkCyan
     Write-Host ("Selected: [{0}] {1}" -f $selection, $menuMap[[int]$selection]) -ForegroundColor Yellow
     Write-Host (&$sep) -ForegroundColor DarkCyan
 
