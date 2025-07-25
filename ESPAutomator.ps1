@@ -87,7 +87,9 @@ function Get-SerialPort {
         return $ports[0]
     }
 
-    Write-Host "Available COM ports:" -ForegroundColor Cyan
+    Write-Host "+-------------------------------+" -ForegroundColor Cyan
+    Write-Host "|  Available COM Ports          |" -ForegroundColor Cyan
+    Write-Host "+-------------------------------+" -ForegroundColor Cyan
     for ($i = 0; $i -lt $ports.Count; $i++) {
         Write-Host " [$i] $($ports[$i])"
     }
@@ -97,6 +99,7 @@ function Get-SerialPort {
     } until ($idx -match '^\d+$' -and [int]$idx -lt $ports.Count)
 
     $port = $ports[[int]$idx]
+    Write-Host (&$sep) -ForegroundColor DarkCyan
     Write-Host "Selected port: $port" -ForegroundColor Green
     return $port
 }
@@ -110,9 +113,16 @@ function Select-Chip {
     Write-Host "|  [1] ESP32-WROOM-32E          |" -ForegroundColor Cyan
     Write-Host "|  [2] ESP32-S3                 |" -ForegroundColor Cyan
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
+    Write-Host ""
 
     do {
-        $choice = Read-Host "Enter choice"
+        #$choice = Read-Host "Enter choice" -ForegroundColor Yellow
+        Write-Host "Enter choice-" -ForegroundColor Yellow
+        $choice = Read-Host
+        if (-not $choice) {
+            Write-Host "Please enter a valid choice." -ForegroundColor Red
+            continue
+        }
     } until ($choice -in '0','1','2')
 
     switch ($choice) {
@@ -234,7 +244,7 @@ while ($true) {
         2  { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'flash-id') }
         3  { Invoke-Esptool -EsptoolArgs @('--chip',$chip,'--port',$port,'erase-flash') }
         4  {
-            $fwFolder = Read-Host "Enter firmware folder path"
+            $fwFolder = Read-Host "Enter folder path [for bootloader.bin, partition-table.bin, firmware/app.bin]"
             if (Test-Path $fwFolder) {
                 $bins = Get-ChildItem $fwFolder -Filter *.bin -File
                 $boot = TryGetBinPath -Bins $bins -Pattern '^boot'      -Label 'bootloader'
