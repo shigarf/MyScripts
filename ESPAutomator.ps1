@@ -36,12 +36,14 @@ $menuMap = @{
 
 # Function: Detect esptool.exe path
 function Get-EsptoolPath {
+    #===================================================================
     Clear-Host
     Write-Host (&$sep) -ForegroundColor DarkCyan
     $title = "ESPTool v5 Automator"
     $pad   = [Math]::Max(0, [Math]::Floor(((&$width) - $title.Length)/2))
     Write-Host (" " * $pad) $title
     Write-Host (&$sep) -ForegroundColor DarkCyan
+    #===================================================================
     Write-Host "Checking for esptool.exe ..." -ForegroundColor Yellow
     $cmd = Get-Command esptool.exe -ErrorAction SilentlyContinue
     if ($cmd) {
@@ -108,7 +110,7 @@ function Select-Chip {
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
     Write-Host "|  Select Chip                  |" -ForegroundColor Cyan
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
-    Write-Host "|  [0] Auto                     |" -ForegroundColor Cyan
+    Write-Host "|  [0] Auto Detect              |" -ForegroundColor Cyan
     Write-Host "|  [1] ESP32-WROOM-32E          |" -ForegroundColor Cyan
     Write-Host "|  [2] ESP32-S3                 |" -ForegroundColor Cyan
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
@@ -124,6 +126,23 @@ function Select-Chip {
     }
     else {
         return "esp32s3"
+    }
+}
+
+# Function: Try to get BIN file path matching a pattern
+function TryGetBinPath {
+    param (
+        [System.IO.FileInfo[]]$Bins,
+        [string]$Pattern,
+        [string]$Label
+    )
+    $match = $Bins | Where-Object { $_.BaseName -match $Pattern } | Select-Object -First 1
+    if ($match) {
+       Write-Host ("Found {0}: {1}" -f $Label, $match.Name) -ForegroundColor Green
+        return $match.FullName
+    } else {
+        Write-Host "Could not detect $Label automatically." -ForegroundColor Yellow
+        return $null
     }
 }
 
@@ -228,16 +247,16 @@ while ($true) {
             $fwFolder = Read-Host "Enter firmware folder path"
             if (Test-Path $fwFolder) {
                 $bins = Get-ChildItem $fwFolder -Filter *.bin -File
-                $boot = ($bins | Where-Object { $_.BaseName -match '^boot' }    | Select-Object -First 1).FullName
-                $part = ($bins | Where-Object { $_.BaseName -match '^part' }    | Select-Object -First 1).FullName
-                $app  = ($bins | Where-Object { $_.BaseName -match '^(firm|app)' } | Select-Object -First 1).FullName
+                $boot = TryGetBinPath -Bins $bins -Pattern '^boot'     -Label 'bootloader'
+                $part = TryGetBinPath -Bins $bins -Pattern '^part'     -Label 'partition-table'
+                $app  = TryGetBinPath -Bins $bins -Pattern '^(firm|app)' -Label 'firmware/app'
 
                 if (-not $boot) { $boot = Read-Host "Enter bootloader.bin full path" }
                 if (-not $part) { $part = Read-Host "Enter partition-table.bin full path" }
                 if (-not $app)  { $app  = Read-Host "Enter firmware.bin full path" }
             }
             else {
-                Write-Host "Folder not found, entering files manually." -ForegroundColor Red
+                Write-Host "⚠ Folder not found — manual entry required." -ForegroundColor Red
                 $boot = Read-Host "Bootloader.bin path"
                 $part = Read-Host "Partition-table.bin path"
                 $app  = Read-Host "Firmware.bin path"
