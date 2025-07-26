@@ -23,11 +23,11 @@ $script:UIColors = @{
     Title     = 'DarkCyan'
     Section   = 'Magenta'
     MenuItem  = 'White'
-    Highlight = 'Blue'
+    Highlight = 'Black'
     Warning   = 'Yellow'
     Error     = 'Red'
 }
-$script:Version  = '1.1.1'
+$script:Version  = '1.1.2'
 $script:subtitle = "ESPTool V5 Automator"
 
 #------------------------------------------------------------
