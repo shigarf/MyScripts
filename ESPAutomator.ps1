@@ -27,7 +27,7 @@ $script:UIColors = @{
     Warning   = 'Yellow'
     Error     = 'Red'
 }
-$script:Version  = '1.1.2'
+$script:Version  = '1.2.0'
 $script:subtitle = "ESPTool V5 Automator"
 
 #------------------------------------------------------------
