@@ -203,6 +203,7 @@ function Get-SerialPort {
 # }
 
 function Select-Chip {
+    Show-Separator
     Write-Host ''
     Write-Host "+-------------------------------+" -ForegroundColor Cyan
     Write-Host "|  Select Chip                  |" -ForegroundColor Cyan
@@ -270,6 +271,7 @@ function Confirm-Action {
 #------------------------------------------------------------
 $script:esptoolPath  = Get-EsptoolPath
 $script:espefusePath = Get-EspefusePath
+Show-Separator
 $port               = Get-SerialPort
 if (-not $port) { exit 1 }
 $chip               = Select-Chip
