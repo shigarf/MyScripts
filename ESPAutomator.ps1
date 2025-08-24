@@ -316,7 +316,10 @@ while ($true) {
             }
         }
         4  {
-            $fwFolder = Read-Host "Enter firmware folder path"
+            $fwFolder = Read-Host "Enter firmware folder path (or press Enter for current directory)"
+            if ([string]::IsNullOrWhiteSpace($fwFolder)) {
+                $fwFolder = "."
+            }
             if (Test-Path $fwFolder) {
                 $bins = Get-ChildItem $fwFolder -Filter *.bin -File
                 $boot = TryGetBinPath -Bins $bins -Pattern '^boot'      -Label 'bootloader'
